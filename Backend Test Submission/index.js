@@ -1,25 +1,19 @@
-// index.js (Backend Server File)
 const express = require('express');
-const bodyParser = require('body-parser'); // To parse JSON request bodies
-const cors = require('cors'); // <--- NEW: For Cross-Origin Resource Sharing
-const { Log } = require('G:/2318024/Logging Middleware/logger.js'); // Import the Log function from logger.js
+const bodyParser = require('body-parser'); 
+const cors = require('cors'); 
+const { Log } = require('G:/2318024/Logging Middleware/logger.js'); 
 
 const app = express();
-const PORT = 3001; // The port your backend will listen on
+const PORT = 3001; 
 
-// Middleware
-app.use(bodyParser.json()); // Parses incoming request bodies with JSON payloads
-app.use(express.json()); // Another way to parse JSON, often used alongside bodyParser
+app.use(bodyParser.json()); 
+app.use(express.json()); 
 app.use(cors({
-    origin: 'http://localhost:3000' // IMPORTANT: Replace 3001 with your actual frontend port
-    // If your frontend runs on http://localhost:3000 (unlikely if backend is 3000), adjust this.
-    // For wider testing, you can use origin: '*' but it's less secure for production.
-})); // <--- NEW: Enable CORS. This allows your frontend (e.g., from localhost:3001) to connect.
+    origin: 'http://localhost:3000' 
+})); 
 
-// In-memory store for short URLs (for simplicity)
 const urlStore = {};
 
-// Helper to generate a random shortcode
 function generateShortcode() {
     const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -29,11 +23,8 @@ function generateShortcode() {
     }
     return result;
 }
-
-// Log initial backend startup
 Log("backend", "info", "config", "Backend server starting up.");
 
-// Route to shorten URL
 app.post('/shorturls', (req, res) => {
     const { url, shortcode, validity } = req.body;
 
@@ -45,18 +36,18 @@ app.post('/shorturls', (req, res) => {
     let generatedShortcode = shortcode;
     if (!generatedShortcode) {
         generatedShortcode = generateShortcode();
-        while (urlStore[generatedShortcode]) { // Ensure shortcode is unique
+        while (urlStore[generatedShortcode]) { 
             generatedShortcode = generateShortcode();
         }
     } else {
         if (urlStore[generatedShortcode]) {
             Log("backend", "warn", "controller", `Custom shortcode "${generatedShortcode}" already in use.`);
-            return res.status(409).json({ error: 'Custom shortcode already exists.' }); // 409 Conflict
+            return res.status(409).json({ error: 'Custom shortcode already exists.' }); 
         }
     }
 
     const shortlink = `http://localhost:${PORT}/${generatedShortcode}`;
-    const expirationTime = validity ? Date.now() + validity * 60 * 1000 : null; // validity in minutes
+    const expirationTime = validity ? Date.now() + validity * 60 * 1000 : null; 
 
     urlStore[generatedShortcode] = {
         longUrl: url,
@@ -64,7 +55,7 @@ app.post('/shorturls', (req, res) => {
     };
 
     Log("backend", "info", "service", `URL shortened: ${url} -> ${shortlink}`);
-    res.status(201).json({ shortlink }); // 201 Created
+    res.status(201).json({ shortlink }); 
 });
 
 // Route to redirect short URL
@@ -78,9 +69,9 @@ app.get('/:shortcode', (req, res) => {
     }
 
     if (entry.expiration && Date.now() > entry.expiration) {
-        delete urlStore[shortcode]; // Remove expired URL
+        delete urlStore[shortcode]; 
         Log("backend", "info", "cache", `Expired shortcode "${shortcode}" removed.`);
-        return res.status(410).send('Short URL has expired.'); // 410 Gone
+        return res.status(410).send('Short URL has expired.'); 
     }
 
     Log("backend", "info", "controller", `Redirecting ${shortcode} to ${entry.longUrl}`);
